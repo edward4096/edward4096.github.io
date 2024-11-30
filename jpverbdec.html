@@ -27,11 +27,8 @@ conformance with the Group's
 <script>
 
 // advanced feature ideas:
-// - conjugating jodoushis and copula
 // - show kana reading
-// - allow copula after nouns
-// - missing contractions: ておくれ -> とくれ
-// - adjective te-forms + auxiliaries
+// - all i-adjective relaxed endings
 
 FROM_ICHIDAN=1;
 FROM_GODAN=2;
@@ -96,7 +93,11 @@ function addTerminal(z, parts, as, explain) {
 }
 
 function addNoun(z, parts, as, explain) {
-	strAdd([z, parts, as, "noun", explain]);
+	parts = [z, parts, as, "noun", explain];
+	strAdd(parts);
+	if (inputString.startsWith(parts[0])) {
+		addCopula(z,parts);
+	}
 }
 
 function addGodanU(z, parts, as, explain) {
@@ -384,7 +385,6 @@ function addIAdjective(z, parts, as, explain) {
 		addTerminal(z+"かっ", parts, "renyoukei");
 		addTeForm(z+"くて", parts);
 		addIAdjective(z+"くない", parts, "negative");
-		addIAdjective(z+"くはない", parts, "negative");
 		addTerminal(z+"ければ", parts, "conditional");
 		addTerminal(z+"けりゃ", parts, "conditional");
 		addTerminal(z+"きゃ", parts, "conditional");
@@ -393,18 +393,50 @@ function addIAdjective(z, parts, as, explain) {
 		addTerminal(z+"そう", parts, "seems like");
 		addTerminal(z+"さそう", parts, "seems like");
 		addTerminal(z+"き", parts, "rentaikei", "archaic");
+
+		for (var i=0;i<=sKakarijoshi.length;i+=1){
+			for (var j=0;j<sTeAuxVerbs.length;j+=1){
+				var p=[z+"く", parts, "", "te-form"];
+				if (i!=sKakarijoshi.length) { ;p=[p[0]+sKakarijoshi[i][0],p, sKakarijoshi[i][1],"","add kakarijoshi after te-form"]; }
+				sTeAuxVerbs[j][0](p[0]+sTeAuxVerbs[j][1], p, sTeAuxVerbs[j][2], sTeAuxVerbs[j][3]);
+			}
+		}
 	}
 
 	addIAdjectiveRelaxedEndings(z, parts);
+}
+function addBeki(z,parts) {
+	var p = [z+"べし",parts,'should',''];
+	addNoun(z+"べき", p, "", "from rentaikei");
+	addTerminal(z+"べし", p, "", "rare");
+	strAdd([z+"べかる", p, "", "rentaikei; rare"]);
+	addMizenkei(z+"べから", p, 0);
+	addRenyoukei(z+"べく", p);
+	addKateikei(z+"べけれ", p, 0);
+	addTeForm(z+"べくて", p, 0);
+}
+
+function addMaji(z,parts) {
+	var p = [z+"まじ",parts,'should not',''];
+	addNoun(z+"まじき", p, "", "from rentaikei");
+	addTerminal(z+"まじ", p, "", "rare");
+	strAdd([z+"まじかる", p, "", "rentaikei; rare"]);
+	addMizenkei(z+"まじく", p, 0); // without auxiliary
+	addMizenkei(z+"まじから", p, 0); // with auxiliary
+	addRenyoukei(z+"まじく", p); // without auxiliary
+	addRenyoukei(z+"まじかり", p); // with auxiliary
+	addTeForm(z+"まじかりて", p, 0);
+	addMeireikei(z+"まじかれ", p);
 }
 
 function addShuushikei(z, parts) {
 	parts = [z, parts, "", "shuushikei"];
 	addTerminal(z+"な", parts, "negative imperative");
-	addNoun(z+"べき", parts, "should");
 	addNoun(z+"そう", parts, "I've heard that...");
 	addTerminal(z+"らしい", parts, "apparently...");
 	addTerminal(z+"まい", parts, "formal negative volitional");
+	addBeki(z,parts);
+	addMaji(z,parts);
 }
 
 function addMizenkei(z, parts, from) {
@@ -416,6 +448,7 @@ function addMizenkei(z, parts, from) {
 	addTerminal(z+"ん", parts, "negative", "contraction of ない");
 	addTerminal(z+"んかった", parts, "negative past");
 	addTerminal(z+"ぬ", parts, "negative", "somewhat archaic");
+	addTerminal(z+"へん", parts, "negative", "Kansai-ben");
 	addNoun(z+"ず", parts, "negative", "archaic");
 	addTerminal(z+"ないで", parts, "without ...");
 	addTerminal(z+"ずに", parts, "without ...", "に is the adverbalizing form of the copula");
@@ -435,6 +468,27 @@ function addMizenkei(z, parts, from) {
 		}
 	}
 }
+function addMasu(z,parts, as, explain) {
+	z=remove(z,"ます");
+	if (inputString.startsWith(parts[0])) {
+		var p =[z+"ます", parts, "polite", "irregular"];
+		strAdd(p);
+		addShuushikei(z+"ます", p);
+		addMizenkei(z+"ませ", p);
+		addRenyoukei(z+"まし", p);
+		addKateikei(z+"ませれ", p,FROM_GODAN);
+		addIkoukei(z+"ましょ", p);
+		addMeireikei(z+"ませ", p);
+		addMeireikei(z+"まし", p);
+		addTaForm(z+"ました", p);
+		addTeForm(z+"まして", p, "rarely used");
+
+		p = [z+"ませ", p, "", "mizenkei"];
+		p = [p[0]+"ん", p, "negative", ""];
+		p = [p[0]+"でした", p, "past", ""];
+		strAdd(p);
+	}
+}
 function addRenyoukei(z, parts) {
 	parts = [z, parts, "", "renyoukei"];
 	strAdd(parts);
@@ -445,18 +499,10 @@ function addRenyoukei(z, parts) {
 	addGodanRu(z+"やがる", parts, "very rude");
 	addNoun(z+"そう", parts, "seems like...");
 	addNoun(z+"がち", parts, "tends to...");
-	addTerminal(z+"ます", parts, "polite");
-	addTerminal(z+"ません", parts, "polite negative");
-	addTerminal(z+"ました", parts, "polite past");
-	addTerminal(z+"ましたら", parts, "polite past conditional");
-	addTerminal(z+"ませんでした", parts, "polite negative past");
-	addTerminal(z+"ましょう", parts, "polite volitional");
-	addTerminal(z+"まして", parts, "polite te-form", "rare, since te-forms do not usually need to be polite");
-	addTerminal(z+"ませれば", parts, "polite conditional");
-	addTerminal(z+"ませりゃ", parts, "polite conditional");
 	addTerminal(z+"なさい", parts, "polite imperative");
 	addTerminal(z+"な", parts, "polite imperative");
 	addTerminal(z+"ぬ", parts, "close past", "archaic");
+	addMasu(z+"ます",parts);
 }
 function addMeireikei(z, parts) {
 	parts = [z, parts, "", "imperative"];
@@ -483,8 +529,8 @@ function addKateikei(z, parts, from) {
 		if (z.endsWith("け")) { addTerminal(remove(z,"け")+"きゃ", [z+"ば",parts,"conditional","terminal", "godan-specific conjugation"], "", "contraction"); }
 	}
 }
-function addTeForm(z, parts) {
-	parts = [z, parts, "", "te-form"];
+function addTeForm(z, parts, explain) {
+	parts = [z, parts, "", "te-form", explain];
 	strAdd(parts);
 
 	addTerminal(z, parts, "polite imperative");
@@ -502,6 +548,7 @@ function addTeForm(z, parts) {
 		addGodanU(remove(z, "て")+"ちまう", [z+"しまう",parts, "do accidentally, do completely","godan (-u)","using auxiliary しまう"],"","contraction");
 		addIchidan(remove(z, "て")+"たげる", [z+"あげる",parts, "do for someone else","ichidan","using auxiliary あげる"],"","contraction");
 		addGodanRu(remove(z, "て")+"たる", [z+"やる",parts, "do for someone of equal or lesser status, make active efforts to","godan (-ru)","using auxiliary やる"],"","contraction");
+		addKureru(remove(z, "て")+"とくれる", [z+"おくれる",[z+"くれる",parts, "do for me","ichidan (irregular)","using auxiliary くれる"],"polite","ichidan (irregular)",""],"","contraction");
 		addTerminal(z+"ちゃ", parts, "te-form + topic marker");
 	} else if (z.endsWith("で")) {
 		addGodanKu(remove(z, "で")+"どく", [z+"おく",parts, "do in advance, leave in a state","godan (-ku)","using auxiliary おく"],"","contraction");
@@ -512,6 +559,7 @@ function addTeForm(z, parts) {
 		addGodanU(remove(z, "で")+"ぢまう", [z+"しまう",parts, "do accidentally, do completely","godan (-u)","using auxiliary しまう"],"","contraction");
 		addIchidan(remove(z, "で")+"だげる", [z+"あげる",parts, "do for someone else","ichidan","using auxiliary あげる"],"","contraction");
 		addGodanRu(remove(z, "で")+"だる", [z+"やる",parts, "do for someone of equal or lesser status, make active efforts to","godan (-ru)","using auxiliary やる"],"","contraction");
+		addKureru(remove(z, "で")+"どくれる", [z+"おくれる",[z+"くれる",parts, "do for me","ichidan (irregular)","using auxiliary くれる"],"polite","ichidan (irregular)",""],"","contraction");
 		addTerminal(remove(z, "で")+"じゃ", parts, "te-form + topic marker");
 	}
 
@@ -689,11 +737,63 @@ function conjugate(idx, dat, z) {
 		addIchidan(z+"させる", parts, "causative");
 		addIchidan(z+"される", parts, "passive");
 		addGodanU(z+"しっちゃう", parts, "do accidentally, do completely");
+		addBeki(z+"す",parts);
 	} else if (conjAs == 57) {
 		addIAdjective(z+"い", parts, "");
 	} else if (conjAs == 56) {
 		addIAdjective(z+"い", parts, "");
 	}
+}
+
+function addCopula(z,parts) {
+	addTerminal(z+"だ", parts, '', 'plain form');
+	addTerminal(z+"や", parts, '', 'Kansai-ben');
+	addTerminal(z+"じゃ", parts, '', 'western');
+	addTerminal(z+"じゃい", parts, '', 'questioning');
+
+	addTerminal(z+"な", parts, 'rentaikei', '');
+	addTerminal(z+"に", parts, 'adverbalizing', '');
+	addTerminal(z+"の", parts, 'possesive', '');
+	addTerminal(z+"ん", parts, 'rentaikei', 'contraction of な');
+
+	var sTeAuxVerbs2=[[addGodanRu,"ある", "is", "auxiliary"],
+	[addIAdjective,"ない", "is not", "auxiliary"],
+	[addMasu,"ございます","",""]];
+	for (var i=0;i<=sKakarijoshi.length;i+=1){
+		for (var j=0;j<sTeAuxVerbs2.length;j+=1){
+			var p=[z+"で", parts, "", "te-form"];
+			if (i!=sKakarijoshi.length) { ;p=[p[0]+sKakarijoshi[i][0],p, sKakarijoshi[i][1],"","add kakarijoshi after te-form"]; }
+			sTeAuxVerbs2[j][0](p[0]+sTeAuxVerbs2[j][1], p, sTeAuxVerbs2[j][2], sTeAuxVerbs2[j][3]);
+		}
+	}
+
+	addTerminal(z+"だろう", [z+"だ",parts,'','plain form'], 'wondering', '');
+	addTerminal(z+"やろう", [z+"や",parts,'','Kansai-ben'], 'wondering', '');
+	addTerminal(z+"やろ", [z+"や",parts,'','Kansai-ben'], 'wondering', '');
+	addTerminal(z+"じゃろう", [z+"じゃ",parts,'','western'], 'wondering', '');
+	addTerminal(z+"でしょう", [z+"です",parts,'','polite form'], 'wondering', '');
+
+	addIAdjective(z+"じゃない", parts, 'negative', '');
+	addIAdjective(z+"やない", parts, 'negative', 'western');
+
+	addTerminal(z+"です", [z+"だ",parts,'','plain form'], 'polite', '');
+	addTerminal(z+"やす", [z+"や",parts,'','western'], 'polite', '');
+	addTerminal(z+"だす", [z+"だ",parts,'','Osaka-ben'], 'polite', '');
+	addTerminal(z+"どす", [z+"だ",parts,'','Kyoto-ben'], 'polite', '');
+	addTerminal(z+"っす", [z+"だ",parts,'','plain form'], 'semi-polite', '');
+	addTerminal(z+"す", [z+"だ",parts,'','plain form'], 'semi-polite', '');
+
+	addTaForm(z+"だった", [z+"だ",parts,'','plain form']);
+	addTaForm(z+"でした", [z+"です",parts,'','polite form']);
+	addTaForm(z+"やった", [z+"だ",parts,'','Kansai-ben']);
+	addTaForm(z+"じゃった", [z+"だ",parts,'','western']);
+  
+	addKateikei(z+"であれ", [z+"だ",parts,'','plain form'], FROM_ICHIDAN);
+	addKateikei(z+"なら", parts, FROM_ICHIDAN);
+
+	addTerminal(z+"で",parts,'te-form');
+	addTerminal(z+"でして", [z+"です",parts,'','polite form'],'te-form');
+	addTerminal(z+"やって",[z+"や",parts,'','Kansai-ben'],'te-form');
 }
 
 function analyze() {
@@ -707,6 +807,9 @@ function analyze() {
 	iAltCount=1;
 
 	while (iAltCount==1&&inputString.length) {
+		bMatchingKanaKanjiCorrect=true;
+		addCopula("",["-",null,prepDicDef(-3),""]);
+
 		conjugate(-2, (1<<16) | (22<<8) | 2, ""); // kuru
 		conjugate(-1, (1<<16) | (87<<8) | 2, ""); // suru
 
@@ -38520,6 +38623,7 @@ sDicStems={
 "やむな":[{"idx":202288,"dat":80129},],
 };
 sDicDefs={
+"-3":["copula","だ"],
 "-2":["to come","来る"],
 "-1":["to do","する"],
 "19":["gaudy","悪どい"],
